@@ -83,7 +83,7 @@ Use it to find users with a single point of failure in their MFA setup, such as 
 
 ```bash
 # Clone the repository
-git clone https://github.com/<your-username>/<repo-name>.git
+git clone https://github.com/Gyuri1/Duo-Low-MFA-Users-Report.git
 cd <repo-name>
 
 # (Recommended) Create and activate a virtual environment
