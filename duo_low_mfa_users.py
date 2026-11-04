@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 List all Cisco Duo users who have fewer than N (default: 2) MFA devices.
+Users are identified by their unique Duo username.
 
 Counted device types (from the Admin API user object):
   - phones                 (mobile phones, landlines, tablets)
@@ -32,6 +33,8 @@ DEVICE_KEYS = (
     "desktop_authenticators",
 )
 
+CSV_FIELDS = ["username", "email", "status", "device_count", "details"]
+
 
 def parse_args():
     p = argparse.ArgumentParser(
@@ -56,15 +59,6 @@ def device_breakdown(user):
     return {key: len(user.get(key) or []) for key in DEVICE_KEYS}
 
 
-def display_name(user):
-    name = (user.get("realname") or "").strip()
-    if not name:
-        name = " ".join(
-            part for part in (user.get("firstname"), user.get("lastname")) if part
-        ).strip()
-    return name or "(no name)"
-
-
 def main():
     args = parse_args()
     admin = duo_client.Admin(ikey=args.ikey, skey=args.skey, host=args.host)
@@ -83,33 +77,30 @@ def main():
         total = sum(breakdown.values())
         if total < args.min_devices:
             results.append({
-                "username": u.get("username", ""),
-                "name": display_name(u),
+                "username": u.get("username") or "(no username)",
                 "email": u.get("email") or "(no email)",
                 "status": u.get("status", ""),
                 "device_count": total,
                 "details": ", ".join(f"{k}={v}" for k, v in breakdown.items() if v) or "none",
             })
 
-    results.sort(key=lambda r: (r["device_count"], r["name"].lower()))
+    results.sort(key=lambda r: (r["device_count"], r["username"].lower()))
 
     # Console output
     print(f"Total users checked: {len(users)}")
     print(f"Users with fewer than {args.min_devices} MFA device(s): {len(results)}\n")
     if results:
-        header = f"{'Name':<30} {'Email':<40} {'Status':<12} {'Devices':<8} Details"
+        header = f"{'Username':<30} {'Email':<40} {'Status':<12} {'Devices':<8} Details"
         print(header)
         print("-" * len(header))
         for r in results:
-            print(f"{r['name'][:30]:<30} {r['email'][:40]:<40} "
+            print(f"{r['username'][:30]:<30} {r['email'][:40]:<40} "
                   f"{r['status']:<12} {r['device_count']:<8} {r['details']}")
 
     # Optional CSV output
     if args.csv:
         with open(args.csv, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(
-                f, fieldnames=["username", "name", "email", "status", "device_count", "details"]
-            )
+            writer = csv.DictWriter(f, fieldnames=CSV_FIELDS)
             writer.writeheader()
             writer.writerows(results)
         print(f"\nCSV written to: {args.csv}")
