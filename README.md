@@ -1,4 +1,4 @@
-# Duo-Low-MFA-Users-Report
+# Duo Low-MFA Users Report
 
 ![Python](https://img.shields.io/badge/python-3.8%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -31,7 +31,8 @@ Use it to find users with a single point of failure in their MFA setup, such as 
 
 - Retrieves **all** users from Duo, with pagination handled automatically.
 - Counts every enrolled MFA device type per user.
-- Lists the user's **name, email, status, device count, and device breakdown**.
+- Identifies each user by their **unique Duo username**. Display names are not unique and may be empty.
+- Lists the user's **username, email, status, device count, and device breakdown**.
 - Lets you set the minimum device count with `--min-devices` (default: `2`).
 - Can export results to **CSV** with `--csv`.
 - Accepts credentials as **environment variables** or **command-line arguments**.
@@ -82,8 +83,8 @@ Use it to find users with a single point of failure in their MFA setup, such as 
 
 ```bash
 # Clone the repository
-git clone https://github.com/Gyuri1/Duo-Low-MFA-Users-Report.git
-cd Duo-Low-MFA-Users-Report
+git clone https://github.com/<your-username>/<repo-name>.git
+cd <repo-name>
 
 # (Recommended) Create and activate a virtual environment
 python3 -m venv venv
@@ -158,19 +159,22 @@ python3 duo_low_mfa_users.py --ikey DIXXX --skey xxx --host api-xxxx.duosecurity
 Total users checked: 152
 Users with fewer than 2 MFA device(s): 3
 
-Name                           Email                                    Status       Devices  Details
-------------------------------------------------------------------------------------------------------
-John Doe                       john.doe@example.com                     active       0        none
-Jane Smith                     jane.smith@example.com                   active       1        phones=1
-Peter Kovacs                   peter.kovacs@example.com                 bypass       1        webauthncredentials=1
+Username                       Email                                    Status       Devices  Details
+-----------------------------------------------------------------------------------------------------
+jdoe                           john.doe@example.com                     active       0        none
+jsmith                         jane.smith@example.com                   active       1        phones=1
+pkovacs                        peter.kovacs@example.com                 bypass       1        webauthncredentials=1
 ```
+
+Results are sorted by device count (ascending), then alphabetically by username.
 
 ### CSV Format
 
 ```csv
-username,name,email,status,device_count,details
-jdoe,John Doe,john.doe@example.com,active,0,none
-jsmith,Jane Smith,jane.smith@example.com,active,1,phones=1
+username,email,status,device_count,details
+jdoe,john.doe@example.com,active,0,none
+jsmith,jane.smith@example.com,active,1,phones=1
+pkovacs,peter.kovacs@example.com,bypass,1,webauthncredentials=1
 ```
 
 > Users of all statuses are included: `active`, `bypass`, `disabled`, and `locked out`. To report only active users, add `if u.get("status") != "active": continue` at the beginning of the user loop.
@@ -187,7 +191,8 @@ jsmith,Jane Smith,jane.smith@example.com,active,1,phones=1
 | `40101 Invalid signature` / `40103`     | Wrong `ikey`/`skey`, or the system clock is off. Sync time via NTP.         |
 | Connection / SSL / DNS error            | Check `DUO_HOST`. Use the hostname only, without `https://`. Check proxy/firewall. |
 | `429 Too Many Requests`                 | Rate limit hit. The library retries automatically. Rerun later if needed.   |
-| Empty or missing email in output        | The user has no email set in Duo. Update it in the Admin Panel or your directory sync. |
+| `(no email)` in output                  | The user has no email set in Duo. Update it in the Admin Panel or your directory sync. |
+| Long usernames are cut off in console   | The console column is 30 characters wide. The CSV export always contains the full username. |
 | Script is slow on large tenants         | This is expected. Every user is fetched through paginated API calls.        |
 
 ---
@@ -202,7 +207,7 @@ jsmith,Jane Smith,jane.smith@example.com,active,1,phones=1
   venv/
   ```
 - Grant the Admin API application **read-only** permission and nothing more.
-- Generated CSV files contain personal data (names, emails). Handle them according to your organization's data protection policy, such as GDPR.
+- Generated CSV files contain personal data (usernames, emails). Handle them according to your organization's data protection policy, such as GDPR.
 
 ---
 
